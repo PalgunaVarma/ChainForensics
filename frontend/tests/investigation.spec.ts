@@ -1,0 +1,48 @@
+import {test,expect} from '@playwright/test';
+import {fileURLToPath} from 'node:url';
+test('connected investigation: generate, inspect, filter, save notes and export',async({page})=>{
+ test.setTimeout(90000);
+ const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:1000});await page.goto('/');await page.getByRole('button',{name:'Investigation',exact:true}).click();
+ await expect(page.getByText('Analysis engine connected')).toBeVisible();
+ await page.getByRole('button',{name:'Run sample analysis',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('100 sample transactions analyzed',{timeout:60000});
+ await expect(page.locator('.metric').first()).toContainText('100');
+ await expect(page.locator('.network-svg')).toBeVisible();
+ await page.getByRole('button',{name:'All transactions',exact:true}).click();
+ await expect(page.locator('tbody tr').first()).toContainText('Flagged for review');
+ await page.getByRole('button',{name:/^Inspect /}).first().click();
+ await expect(page.locator('.network-svg')).toBeVisible();
+ await page.getByRole('button',{name:'Save to evidence',exact:true}).click();
+ await page.getByRole('button',{name:/^Evidence/}).click();
+ await page.getByRole('textbox',{name:'Analyst note'}).fill('Review fee share and source records before further attribution.');
+ await page.getByRole('button',{name:'Save finding & note'}).click();
+ await expect(page.locator('.finding')).toContainText('Review fee share');
+ const downloadPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Export report',exact:true}).click();
+ expect((await downloadPromise).suggestedFilename()).toMatch(/^chain-forensics-report-/);
+ await page.reload();await page.getByRole('button',{name:/^Evidence/}).click();
+ await expect(page.locator('.finding')).toContainText('Review fee share');
+ await page.getByRole('button',{name:'Transactions',exact:true}).click();
+ await page.getByRole('textbox',{name:'Search transactions'}).fill('not-a-real-transaction');
+ await expect(page.getByText('No transactions match your filters.')).toBeVisible();
+ await page.getByRole('button',{name:'Clear search'}).click();
+ await page.getByRole('button',{name:'Next',exact:true}).click();
+ await expect(page.locator('.table-footer')).toContainText('9–16');
+ expect(errors).toEqual([]);
+});
+test('import, errors, and responsive presentation',async({page})=>{
+ test.setTimeout(60000);await page.goto('/');await page.getByRole('button',{name:'Investigation',exact:true}).click();
+ await expect(page.getByText('Analysis engine connected')).toBeVisible();
+ await page.getByLabel('Import dataset').setInputFiles(fileURLToPath(new URL('../../data/samples/demo.json',import.meta.url)));
+ await expect(page.getByRole('status')).toContainText('Dataset imported and analyzed.');
+ await expect(page.locator('.dataset-tag')).toHaveText('IMPORTED DATA');
+ await page.getByLabel('Import dataset').setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from('bad json')});
+ await expect(page.getByRole('alert')).toContainText('Malformed');
+ await page.getByRole('button',{name:'Dismiss error'}).click();
+ await page.getByRole('button',{name:'Run sample analysis',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('100 sample transactions analyzed');
+ await expect(page.locator('.network-svg')).toBeVisible();
+ await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:'../artifacts/trace-presentation-desktop.png',fullPage:true});
+ for(const width of [390,768,1024]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy()}
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'../artifacts/trace-presentation-mobile.png',fullPage:true});
+});

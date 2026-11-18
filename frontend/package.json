@@ -1,0 +1,32 @@
+{
+  "name": "chain-forensics-ui",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check-toolchain": "tsc --version && vite --version",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "playwright test"
+  },
+  "dependencies": {
+    "react": "latest",
+    "react-dom": "latest",
+    "cytoscape": "latest",
+    "echarts": "latest",
+    "@tanstack/react-query": "latest",
+    "lucide-react": "latest"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "vite": "latest",
+    "@vitejs/plugin-react": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/cytoscape": "latest",
+    "tailwindcss": "latest",
+    "@tailwindcss/vite": "latest",
+    "@playwright/test": "latest"
+  }
+}

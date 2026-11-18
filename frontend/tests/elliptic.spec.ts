@@ -1,0 +1,35 @@
+import {test,expect} from '@playwright/test';
+import {fileURLToPath} from 'node:url';
+import {existsSync} from 'node:fs';
+const artifact=fileURLToPath(new URL('../../artifacts/elliptic/',import.meta.url));
+test('Elliptic benchmark, unlabeled prediction, labeled evaluation, export and graph',async({page})=>{
+ test.skip(!existsSync(artifact+'judge-features.csv'),'Train the Elliptic model to run the benchmark browser test.');
+ test.setTimeout(90000);const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.setViewportSize({width:1440,height:1000});await page.goto('/');
+ await expect(page.getByRole('heading',{name:'Held-out test performance'})).toBeVisible();
+ await expect(page.locator('.eval-metrics')).toContainText('0.8031');
+ await expect(page.locator('.eval-metrics')).toContainText('0.7963');
+ await expect(page.locator('.confusion')).toContainText('775');
+ await page.getByRole('button',{name:'Model card',exact:true}).click();
+ await expect(page.locator('.model-card')).toContainText('Logistic regression');
+ await expect(page.locator('.model-card')).toContainText('Histogram gradient boosting');
+ await page.getByRole('button',{name:'Live evaluation',exact:true}).click();
+ await page.getByLabel('Elliptic features CSV').setInputFiles(artifact+'judge-features.csv');
+ await page.getByRole('button',{name:'Score uploaded transactions'}).click();
+ await expect(page.locator('.evaluation-timing')).toContainText('200 records scored');
+ await expect(page.locator('.eval-metrics')).toContainText('Unavailable');
+ await page.getByLabel('Elliptic labels CSV').setInputFiles(artifact+'judge-labels.csv');
+ await page.getByRole('button',{name:'Score uploaded transactions'}).click();
+ await expect(page.locator('.evaluation-timing')).toContainText('0 training/validation ID overlaps');
+ await expect(page.locator('.eval-metrics')).not.toContainText('Unavailable');
+ const promise=page.waitForEvent('download');await page.getByRole('button',{name:'Export predictions & metrics'}).click();
+ expect((await promise).suggestedFilename()).toBe('chain-forensics-upload-evaluation.json');
+ await page.getByRole('button',{name:'Transaction graph',exact:true}).click();
+ await page.getByRole('button',{name:'Inspect',exact:true}).first().click();
+ await expect(page.locator('.elliptic-graph')).toBeVisible();
+ await page.getByRole('button',{name:'Benchmark',exact:true}).click();
+ await page.screenshot({path:'../artifacts/chain-forensics-elliptic-desktop.png',fullPage:true});
+ for(const width of [390,768,1024]){await page.setViewportSize({width,height:844});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();}
+ await page.setViewportSize({width:390,height:844});await page.screenshot({path:'../artifacts/chain-forensics-elliptic-mobile.png',fullPage:true});
+ expect(errors).toEqual([]);
+});

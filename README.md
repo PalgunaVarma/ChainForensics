@@ -99,7 +99,7 @@ cd /home/doom/bitcoin-intelligence
 OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 python -m pytest backend -q
 npm --prefix frontend run build
 # With both servers running:
-SATYA_BROWSER_PATH=/home/doom/Documents/.tools/playwright/chromium-1248/chrome-linux64/chrome npm --prefix frontend test
+CHAIN_FORENSICS_BROWSER_PATH=/home/doom/Documents/.tools/playwright/chromium-1248/chrome-linux64/chrome npm --prefix frontend test
 ```
 
 ## API
